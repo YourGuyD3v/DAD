@@ -2,15 +2,14 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 
 contract WalletConnector is ChainlinkClient {
     using Chainlink for Chainlink.Request;
     
     struct AccountInfo {
-        address walletAddress;
-        uint256[] currentBalance;
+        address connectorAddress;
+        uint256 currentBalance;
         uint256[] nftTokens;
         uint256[] transactionIds;
     }
@@ -34,7 +33,7 @@ contract WalletConnector is ChainlinkClient {
     bytes32 private constant JOB_ID = bytes32("ca98366cc7314957b8c012c72f05aeeb");
     string public Url = "https://sepolia.infura.io/v3/";
     uint256 public chainId = block.chainid;
-    address public walletAddress = walletAddress;
+    address public walletAddress;
     string internal endpoint;
     uint256 private constant PRICE = (1 * LINK_DIVISIBILITY) / 10;
     bytes32 private s_lastRequestId;
@@ -51,9 +50,8 @@ contract WalletConnector is ChainlinkClient {
    /////////////////
 
     function connectWallet() external {
-        require(msg.sender != address(0), "Please connect your Wallet!");
-
-        AccountInfo memory account = AccountInfo( msg.sender, new uint256[](0),  new uint256[](0), new uint256[](0));
+        walletAddress = msg.sender;
+        AccountInfo memory account = AccountInfo(msg.sender, walletAddress.balance, new uint256[](0), new uint256[](0));
         connectedWallets[msg.sender] = account;
         emit WalletConnected(msg.sender);
     }

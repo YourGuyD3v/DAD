@@ -59,17 +59,20 @@ module.exports = {
     runOnCompile: false,
     only: ["Raffle"],
 },
-  solidity: {
-    compilers: [
-
-      {
-        version: "0.8.0"
-      }, 
-      {
-        version: "0.8.7"
-      }
-    ]
+solidity: {
+  version: "0.8.18",
+  settings: {
+    viaIR: true,
+    optimizer: {
+      enabled: true,
+      details: {
+        yulDetails: {
+          optimizerSteps: "u",
+        },
+      },
+    },
   },
+},
   mocha: {
     timeout: 500000, // 500 seconds max for running tests
   }
