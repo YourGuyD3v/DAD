@@ -3,10 +3,9 @@ pragma solidity ^0.8.8;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-import "./WalletConnector.sol";
 
 
-contract TrackNFTData is AccessControl, ChainlinkClient, WalletConnector  {
+contract TrackNFTData is AccessControl, ChainlinkClient  {
         using Chainlink for Chainlink.Request;
 
         struct NftMetadata {
@@ -138,10 +137,6 @@ contract TrackNFTData is AccessControl, ChainlinkClient, WalletConnector  {
     //     return nftTokens.length; // Return a value outside the valid index range to indicate not found
     // }
 
-    function getNftByAddress() public view returns (NftMetadata[] memory) {
-    bytes32 ownerBytes = bytes32(uint256(uint160(walletAddress)));
-    return i_nftMetadata[ownerBytes];
-    }
     
     function isAuthorized(address account) public view returns (bool) { 
     return hasRole(ADMIN_ROLE, account);
