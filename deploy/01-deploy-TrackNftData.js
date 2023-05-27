@@ -7,8 +7,8 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
 
-    args = []
-    const softRock = await deploy("TransactionData", {
+    args = [process.env.OPENSEA_APIURL]
+    const trackNftData = await deploy("TrackNFTData", {
         from: deployer,
         args: args,
         log: true,
@@ -18,9 +18,9 @@ module.exports = async ({getNamedAccounts, deployments}) => {
 
     if(!developmentChains.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
         log("Verifying...")
-        await verify(softRock.address, args)
+        await verify(trackNftData.address, args)
     }
     log("---------------------------------------------------------")
 }
 
-module.exports.tags = ["all", "transactiondata"]
+module.exports.tags = ["all", "trackNftData"]

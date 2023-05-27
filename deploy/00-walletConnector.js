@@ -7,7 +7,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
 
-    args = []
+    args = [process.env.BLOCKCHAIN_APIURL]
     const walletConnector = await deploy("WalletConnector", {
         from: deployer,
         args: args,
@@ -21,6 +21,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
         await verify(walletConnector.address, args)
     }
     log("---------------------------------------------------------")
+    log(args)
 }
 
 module.exports.tags = ["all", "walletconnector"]

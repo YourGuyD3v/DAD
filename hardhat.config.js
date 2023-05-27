@@ -1,3 +1,5 @@
+const { version } = require('chai');
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: "0.8.18",
@@ -60,7 +62,17 @@ module.exports = {
     only: ["Raffle"],
 },
 solidity: {
-  version: "0.8.18",
+  compilers: [
+    {
+        version: "0.8.7",
+    },
+    {
+        version: "0.6.6",
+    },
+    {
+        version: "0.4.24",
+    },
+],
   settings: {
     viaIR: true,
     optimizer: {

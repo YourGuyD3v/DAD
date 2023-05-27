@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
-
-error WalletConnector__NotOwner();
 
 contract WalletConnector is ChainlinkClient {
     using Chainlink for Chainlink.Request;
@@ -31,18 +28,15 @@ contract WalletConnector is ChainlinkClient {
     }
 
     event WalletConnected(address sender, uint256 accountBalance);
-    event RequestVolume(bytes32 indexed requestId, Transaction transaction);
+    event RequestVolumeEvent(bytes32 indexed requestId, Transaction transaction);
 
     mapping(address => AccountInfo) private connectedWallets;
     mapping(uint256 => Transaction) private transactions;
 
     bytes32 private constant JOB_ID = bytes32("ca98366cc7314957b8c012c72f05aeeb");
     string internal i_transactionApiUrl;
-    uint256 public chainId = block.chainid;
-    address public walletAddress;
-    string internal endpoint;
+    address internal walletAddress;
     uint256 private constant FEE = (1 * LINK_DIVISIBILITY) / 10;
-    bytes32 private s_lastRequestId;
     uint256 internal i_updatedInterval = 1 days;
     uint256 internal i_lastUpdatedTime = 0;
 
@@ -52,10 +46,6 @@ contract WalletConnector is ChainlinkClient {
         i_transactionApiUrl = transactionApiUrl;
     }
 
-     /////////////////
-    /// Functions ///
-   /////////////////
-
     function connectWallet() external {
         walletAddress = msg.sender;
         AccountInfo memory account = AccountInfo(msg.sender, walletAddress.balance);
@@ -63,21 +53,17 @@ contract WalletConnector is ChainlinkClient {
         emit WalletConnected(msg.sender, walletAddress.balance);
     }
 
-    function fetchWalletTransactions() public returns (bytes32) {
+    function fetchTransactionsData() public returns (bytes32) {
         Chainlink.Request memory req = buildChainlinkRequest(
             JOB_ID,
             address(this),
             this.fulfill.selector
         );
 
-        req.add(
-            "get",
-            i_transactionApiUrl
-        );
+        req.add("get", i_transactionApiUrl);
 
         req.add("path", "height,hash,time,median_time,nonce");
         req.add("path", "height,hash,time,median_time,nonce,difficulty,total_difficulty,size,stripped_size,weight,block_reward,coinbase,transaction_count");
-
         req.add("path", "transactions,hash");
         req.add("path", "transactions,hash,block_hash");
         req.add("path", "transactions,hash,block_hash,block_height");
@@ -95,71 +81,52 @@ contract WalletConnector is ChainlinkClient {
     }
 
     function fetchPeriodicData() internal {
-        if (block.timestamp >= i_updatedInterval + i_lastUpdatedTime) {
-            fetchWalletTransactions();
+        if (block.timestamp >= i_lastUpdatedTime + i_updatedInterval) {
+            fetchTransactionsData();
         }
     }
 
-    function fulfill(bytes32 requestId,
-     Transaction memory transactionResponse,
-     uint256[] memory _data
-     ) public recordChainlinkFulfillment(requestId) {
-        emit RequestVolume(requestId, transactionResponse);
+    function fulfill(bytes32 requestId, bytes32[] memory _data) public recordChainlinkFulfillment(requestId) {
+        Transaction memory transactionResponse;
 
-        transactionResponse.nonce = _data[0];
-        transactionResponse.transactionCount = _data[1];
-        transactionResponse.transactionHash = toString(_data[2]);
-        transactionResponse.blockHash = toString(_data[3]);
-        transactionResponse.blockHeight = _data[4];
-        transactionResponse.time = _data[5];
-        transactionResponse.transactionIndex = _data[6];
-        transactionResponse.from = toString(_data[7]);
-        transactionResponse.to = toString(_data[8]);
-        transactionResponse.value = _data[9];
-        transactionResponse.gas = _data[10];
-        transactionResponse.gasPrice = _data[11];
-        transactionResponse.transactionInputData = toString(_data[12]);
+        transactionResponse.nonce = uint256(_data[0]);
+        transactionResponse.transactionCount = uint256(_data[1]);
+        transactionResponse.transactionHash = bytes32ToString(_data[2]);
+        transactionResponse.blockHash = bytes32ToString(_data[3]);
+        transactionResponse.blockHeight = uint256(_data[4]);
+        transactionResponse.time = uint256(_data[5]);
+        transactionResponse.transactionIndex = uint256(_data[6]);
+        transactionResponse.from = bytes32ToString(_data[7]);
+        transactionResponse.to = bytes32ToString(_data[8]);
+        transactionResponse.value = uint256(_data[9]);
+        transactionResponse.gas = uint256(_data[10]);
+        transactionResponse.gasPrice = uint256(_data[11]);
+        transactionResponse.transactionInputData = bytes32ToString(_data[12]);
+
+        transactions[transactionResponse.blockHeight] = transactionResponse;
+
+        emit RequestVolumeEvent(requestId, transactionResponse);
     }
-
-    // View and Pure Funtions
 
     function getAccountInfo(address wallet) external view returns (AccountInfo memory) {
         return connectedWallets[wallet];
     }
 
     function getTransactionDetailsByAddress() external view returns (Transaction memory) {
-    bytes32 ownerBytes = bytes32(uint256(uint160(walletAddress)));
-    return transactions[uint256(ownerBytes)];
-
+        bytes32 ownerBytes = bytes32(uint256(uint160(walletAddress)));
+        return transactions[uint256(ownerBytes)];
     }
 
-    function getWalletAddress() external view virtual returns (address) {
+    function getWalletAddress() external view returns (address) {
         return walletAddress;
     }
 
-    // Helper function to convert uint256 to string
-    function toString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
+    // Helper function to convert bytes32 to string
+    function bytes32ToString(bytes32 value) internal pure returns (string memory) {
+        bytes memory buffer = new bytes(32);
+        for (uint256 i = 0; i < 32; i++) {
+            buffer[i] = value[i];
         }
-
-        uint256 temp = value;
-        uint256 digits;
-
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-
-        bytes memory buffer = new bytes(digits);
-
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-
         return string(buffer);
     }  
-
 }
