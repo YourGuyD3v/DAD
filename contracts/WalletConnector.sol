@@ -28,22 +28,29 @@ contract WalletConnector is ChainlinkClient {
     }
 
     event WalletConnected(address sender, uint256 accountBalance);
-    event RequestVolumeEvent(bytes32 indexed requestId, Transaction transaction);
+    event DataFullfilled(Transaction transaction);
 
     mapping(address => AccountInfo) private connectedWallets;
     mapping(uint256 => Transaction) private transactions;
 
-    bytes32 private constant JOB_ID = bytes32("ca98366cc7314957b8c012c72f05aeeb");
+    address private immutable i_oracle;
+    bytes32 private immutable i_jobId;
+    uint256 private immutable i_fee;
     string internal i_transactionApiUrl;
     address internal walletAddress;
-    uint256 private constant FEE = (1 * LINK_DIVISIBILITY) / 10;
     uint256 internal i_updatedInterval = 1 days;
     uint256 internal i_lastUpdatedTime = 0;
 
-    constructor(string memory transactionApiUrl) {
-        setChainlinkToken(0x779877A7B0D9E8603169DdbD7836e478b4624789);
-        setChainlinkOracle(0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD);
+    constructor(string memory transactionApiUrl, address _oracle, bytes32 _jobId, uint256 _fee, address _link) {
+        if (_link == address(0)) {
+            setPublicChainlinkToken();
+        } else {
+            setChainlinkToken(_link);
+        }
         i_transactionApiUrl = transactionApiUrl;
+        i_oracle = _oracle;
+        i_jobId = _jobId;
+        i_fee = _fee;
     }
 
     function connectWallet() external {
@@ -53,13 +60,14 @@ contract WalletConnector is ChainlinkClient {
         emit WalletConnected(msg.sender, walletAddress.balance);
     }
 
-    function fetchTransactionsData() public returns (bytes32) {
+    function requestTransactionsData() public returns (bytes32 requestId) {
         Chainlink.Request memory req = buildChainlinkRequest(
-            JOB_ID,
+            i_jobId,
             address(this),
             this.fulfill.selector
         );
 
+        // Set the URL to perform the GET request on
         req.add("get", i_transactionApiUrl);
 
         req.add("path", "height,hash,time,median_time,nonce");
@@ -76,13 +84,15 @@ contract WalletConnector is ChainlinkClient {
         req.add("path", "transactions,hash,block_hash,block_height,time,transaction_index,from,to,value,gas,gas_price");
         req.add("path", "transactions,hash,block_hash,block_height,time,transaction_index,from,to,value,gas,gas_price,input");
 
-        // Sends the request
-        return sendChainlinkRequest(req, FEE);
-    }
+        int256 timesAmount = 10 ** 18;
+        req.addInt("times", timesAmount);
 
-    function fetchPeriodicData() internal {
+        return sendChainlinkRequestTo(i_oracle, req, i_fee);
+    }
+    
+    function requestPeriodicData() internal {
         if (block.timestamp >= i_lastUpdatedTime + i_updatedInterval) {
-            fetchTransactionsData();
+            requestTransactionsData();
         }
     }
 
@@ -105,14 +115,14 @@ contract WalletConnector is ChainlinkClient {
 
         transactions[transactionResponse.blockHeight] = transactionResponse;
 
-        emit RequestVolumeEvent(requestId, transactionResponse);
+        emit DataFullfilled(transactionResponse);
     }
 
     function getAccountInfo(address wallet) external view returns (AccountInfo memory) {
         return connectedWallets[wallet];
     }
 
-    function getTransactionDetailsByAddress() external view returns (Transaction memory) {
+    function getTransactionDetailsByAddress() public view returns (Transaction memory) {
         bytes32 ownerBytes = bytes32(uint256(uint160(walletAddress)));
         return transactions[uint256(ownerBytes)];
     }
@@ -128,5 +138,5 @@ contract WalletConnector is ChainlinkClient {
             buffer[i] = value[i];
         }
         return string(buffer);
-    }  
+    }
 }

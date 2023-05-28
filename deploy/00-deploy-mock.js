@@ -29,7 +29,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("--------------------------------------------------------")
     const mockOracle = await deploy("MockOracle", {
         from: deployer,
-        args: ["0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD"],
+        args: [linkToken.address],
         log: true,
         waitConfirmations: network.config.blockConfirmations || 1
     })

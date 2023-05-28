@@ -27,16 +27,23 @@ contract TrackNFTData is ChainlinkClient  {
 
     mapping(bytes32 => NftMetadata[]) internal i_nftMetadata;
 
-    bytes32 internal constant JOB_ID = "7d80a6386ef543a3abb52817f6707e3b";
-    uint256 internal constant FEE = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
+    address private immutable i_oracle;
+    bytes32 private immutable i_jobId;
+    uint256 private immutable i_fee;
     string internal i_nftApiUrl;
     uint256 internal i_updatedInterval = 1 days;
     uint256 internal i_lastUpdatedTime = 0;
 
-    constructor(string memory nftApiUrl) {
-        setChainlinkToken(0x779877A7B0D9E8603169DdbD7836e478b4624789);
-        setChainlinkOracle(0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD);
-        i_nftApiUrl = nftApiUrl;
+    constructor(string memory _nftApiUrl, address _oracle, bytes32 _jobId, uint256 _fee, address _link) {
+        if (_link == address(0)) {
+            setPublicChainlinkToken();
+        } else {
+            setChainlinkToken(_link);
+        }
+        i_nftApiUrl = _nftApiUrl;
+        i_oracle = _oracle;
+        i_jobId = _jobId;
+        i_fee = _fee;
     }
 
 
@@ -46,7 +53,7 @@ contract TrackNFTData is ChainlinkClient  {
     
        function requestNftData() public returns (bytes32 requestId) {
         Chainlink.Request memory req = buildChainlinkRequest(
-            JOB_ID,
+            i_jobId,
             address(this),
             this.fulfillNftMetadata.selector
         );
@@ -64,7 +71,7 @@ contract TrackNFTData is ChainlinkClient  {
         req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url,price,created_at");
         req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url,price,created_at,updated_at,owner");
 
-        return sendChainlinkRequest(req, FEE);
+       return sendChainlinkRequestTo(i_oracle, req, i_fee);
     }
 
     function fetchPeriodicDataForRequestNftData() internal {
