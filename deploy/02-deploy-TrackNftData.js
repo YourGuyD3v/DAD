@@ -24,7 +24,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     const jobId = ethers.utils.toUtf8Bytes(networkConfig[chainId]["jobId"])
     const fee = networkConfig[chainId]["fee"]
 
-    args = [process.env.OPENSEA_APIURL,
+    const args = [process.env.OPENSEA_APIURL,
         oracleAddress, 
         jobId, 
         fee, 

@@ -9,8 +9,10 @@ contract Trades is ChainlinkClient {
 
     event RequestVolume(bytes32 indexed requestId, string cryptoNames, string cryptoSymbols, uint256 cryptoMaxSupply, uint256 cryptoCirculatingSupply, string cryptoQoutes);
 
-    bytes32 internal i_jobId;
-    uint256 internal i_fee;
+    address private immutable i_oracle;
+    bytes32 private immutable i_jobId;
+    uint256 private immutable i_fee;
+    string internal i_tradeApiUrl;
     uint256 immutable i_updatedInterval = 1 days;
     uint256 immutable i_lastUpdatedTime= 0;
 
@@ -20,11 +22,16 @@ contract Trades is ChainlinkClient {
     uint256 internal i_cryptoCirculatingSupply;
     string internal i_cryptoQoutes;
 
-    constructor() {
-        setChainlinkToken(0x779877A7B0D9E8603169DdbD7836e478b4624789);
-        setChainlinkOracle(0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD);
-        i_jobId = "7d80a6386ef543a3abb52817f6707e3b";
-        i_fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
+    constructor(string memory tradeApiUrl, address _oracle, bytes32 _jobId, uint256 _fee, address _link) {
+        if (_link == address(0)) {
+            setPublicChainlinkToken();
+        } else {
+            setChainlinkToken(_link);
+        }
+        i_tradeApiUrl = tradeApiUrl;
+        i_oracle = _oracle;
+        i_jobId = _jobId;
+        i_fee = _fee;
     }
 
 
@@ -38,7 +45,7 @@ contract Trades is ChainlinkClient {
         // Set the URL to perform the GET request on
         req.add(
             "get",
-            "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?CMC_PRO_API_KEY=0d13079e-077f-42d3-9c62-f903e46992bd"
+            i_tradeApiUrl
         );
 
         req.add("path", "data,1,name");

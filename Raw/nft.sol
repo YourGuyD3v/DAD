@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.8;
+pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@chainlink/contracts/src/v0.8/ChainlinkClient.sol";
 
 
-contract TrackNFTData is AccessControl, ChainlinkClient  {
+contract TrackNFTData is ChainlinkClient  {
         using Chainlink for Chainlink.Request;
 
         struct NftMetadata {
@@ -26,42 +25,42 @@ contract TrackNFTData is AccessControl, ChainlinkClient  {
         NftMetadata nftMetadata
     );
 
-    //     event NFTAdded(address indexed wallet, uint256 tokenId);
-    // event NFTRemoved(address indexed wallet, uint256 tokenId);
-
     mapping(bytes32 => NftMetadata[]) internal i_nftMetadata;
 
-    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-
-    bytes32 private jobId;
-    uint256 private fee;
+    address private immutable i_oracle;
+    bytes32 private immutable i_jobId;
+    uint256 private immutable i_fee;
     string internal i_nftApiUrl;
+    uint256 internal i_updatedInterval = 1 days;
+    uint256 internal i_lastUpdatedTime = 0;
 
-    constructor(string memory nftApiUrl) {
-        _setupRole(OWNER_ROLE, msg.sender);
-        _setupRole(ADMIN_ROLE, address(0x0000000000000000000000000000000000000000));
-         setChainlinkToken(0x779877A7B0D9E8603169DdbD7836e478b4624789);
-        setChainlinkOracle(0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD);
-        jobId = "7d80a6386ef543a3abb52817f6707e3b";
-        fee = (1 * LINK_DIVISIBILITY) / 10; // 0,1 * 10**18 (Varies by network and job)
-        i_nftApiUrl = nftApiUrl;
+    constructor(string memory _nftApiUrl, address _oracle, bytes32 _jobId, uint256 _fee, address _link) {
+        if (_link == address(0)) {
+            setPublicChainlinkToken();
+        } else {
+            setChainlinkToken(_link);
+        }
+        i_nftApiUrl = _nftApiUrl;
+        i_oracle = _oracle;
+        i_jobId = _jobId;
+        i_fee = _fee;
     }
 
-    ///////////////
-   /// Funtion ///
-  ///////////////
+
+    /////////////////
+   /// Functions ///
+  /////////////////
     
        function requestNftData() public returns (bytes32 requestId) {
         Chainlink.Request memory req = buildChainlinkRequest(
-            jobId,
+            i_jobId,
             address(this),
-            this.fulfillNftMetadeta.selector
+            this.fulfillNftMetadata.selector
         );
+
         req.add(
-            "get",
-            i_nftApiUrl
-        );
+            "get", i_nftApiUrl);
+            
         req.add("path", "items,id");
         req.add("path", "items,id,asset_contract_address");
         req.add("path", "items,id,asset_contract_address,token_id");
@@ -72,10 +71,16 @@ contract TrackNFTData is AccessControl, ChainlinkClient  {
         req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url,price,created_at");
         req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url,price,created_at,updated_at,owner");
 
-        return sendChainlinkRequest(req, fee);
+       return sendChainlinkRequestTo(i_oracle, req, i_fee);
     }
 
-     function fulfillNftMetadeta(
+    function fetchPeriodicDataForRequestNftData() internal {
+        if (block.timestamp >= i_updatedInterval + i_lastUpdatedTime) {
+            requestNftData();
+        }
+    }
+
+     function fulfillNftMetadata(
         bytes32 _requestId,
          NftMetadata memory nftMetadataResponse,
          bytes32[] memory _Data 
@@ -96,63 +101,29 @@ contract TrackNFTData is AccessControl, ChainlinkClient  {
 
     }
 
-    //     function addNFT(address wallet, uint256 tokenId) external {
-    //     require(wallet != address(0), "Invalid wallet address");
-    //     require(IERC721(msg.sender).ownerOf(tokenId) == wallet, "Not the owner of the NFT");
-
-    //     connectedWallets[wallet].nftTokens.push(tokenId);
-    //     emit NFTAdded(wallet, tokenId);
-    // }
-
-    // function removeNFT(address wallet, uint256 tokenId) external {
-    //     require(wallet != address(0), "Invalid wallet address");
-    //     uint256[] storage nftTokens = connectedWallets[wallet].nftTokens;
-    //     uint256 index = getNFTIndex(nftTokens, tokenId);
-    //     require(index < nftTokens.length, "NFT not found");
-
-    //     nftTokens[index] = nftTokens[nftTokens.length - 1];
-    //     nftTokens.pop();
-    //     emit NFTRemoved(wallet, tokenId);
-    // }
-
-    //    function programmaticallyAddNFT(address wallet, uint256 tokenId) external {
-    //     require(wallet != address(0), "Invalid wallet address");
-    //     require(IERC721(msg.sender).ownerOf(tokenId) == wallet, "Not the owner of the NFT");
-
-    //     connectedWallets[wallet].nftTokens.push(tokenId);
-    //     emit NFTAdded(wallet, tokenId);
-    // }
-
-    function updateNftData(uint256 tokenId, string calldata newData ) external onlyRole(OWNER_ROLE)  {}
-
     // View and Pure Functions
 
     
-    // function getNFTIndex(uint256[] storage nftTokens, uint256 tokenId) internal view returns (uint256) {
-    //     for (uint256 i = 0; i < nftTokens.length; i++) {
-    //         if (nftTokens[i] == tokenId) {
-    //             return i;
-    //         }
-    //     }
-    //     return nftTokens.length; // Return a value outside the valid index range to indicate not found
-    // }
-
-    
-    function isAuthorized(address account) public view returns (bool) { 
-    return hasRole(ADMIN_ROLE, account);
-
+    function getNFTIndex(uint256[] storage nftTokens, uint256 tokenId) internal view returns (uint256) {
+        for (uint256 i = 0; i < nftTokens.length; i++) {
+            if (nftTokens[i] == tokenId) {
+                return i;
+            }
+        }
+        return nftTokens.length; // Return a value outside the valid index range to indicate not found
     }
 
-    function bytes32ToString(bytes32 _bytes32) public pure returns (string memory) {
-        uint8 i = 0;
-        while(i < 32 && _bytes32[i] != 0) {
-            i++;
-        }
-        bytes memory bytesArray = new bytes(i);
-        for (i = 0; i < 32 && _bytes32[i] != 0; i++) {
-            bytesArray[i] = _bytes32[i];
-        }
-        return string(bytesArray);
+    function getNftByAddress() public view returns (NftMetadata[] memory) {
+    bytes32 ownerBytes = bytes32(uint256(uint160(msg.sender)));
+    return i_nftMetadata[ownerBytes];
     }
+
+    function bytes32ToString(bytes32 value) internal pure returns (string memory) {
+        bytes memory buffer = new bytes(32);
+        for (uint256 i = 0; i < 32; i++) {
+            buffer[i] = value[i];
+        }
+        return string(buffer);
+    }  
 
 }

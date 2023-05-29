@@ -1,5 +1,5 @@
-const { network } = require("hardhat")
-const { developmentChains } = require("../helper-hardhat-config")
+const { ethers, network } = require("hardhat")
+const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
 
 const LINK_TOKEN_ABI = require("@chainlink/contracts/abi/v0.4/LinkToken.json")
@@ -20,13 +20,13 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     } else {
         oracleAddress = networkConfig[chainId]["oracle"]
         linkTokenAddress = networkConfig[chainId]["linkToken"]
-        linkToken = new ethers.Contract(linkTokenAddress, LINK_TOKEN_ABI, deployer)
+        // linkToken = new ethers.Contract(linkTokenAddress, LINK_TOKEN_ABI, deployer)
     }
 
-    const jobId = ethers.utils.toUtf8Bytes(networkConfig[chainId]["jobId"])
+    const jobId = ethers.utils.toUtf8Bytes(networkConfig[chainId]["jobId2"])
     const fee = networkConfig[chainId]["fee"]
 
-    args = [process.env.BLOCKCHAIN_APIURL,
+    const args = [process.env.ETHERSCAN_API_KEY,
         oracleAddress, 
         jobId, 
         fee, 
@@ -47,11 +47,11 @@ module.exports = async ({getNamedAccounts, deployments}) => {
     }
     log("---------------------------------------------------------")
 
-        // auto-funding
-        const fundAmount = networkConfig[chainId]["fundAmount"]
-        await linkToken.transfer(walletConnector.address, fundAmount)
+        // // auto-funding
+        // const fundAmount = networkConfig[chainId]["fundAmount"]
+        // await linkToken.transfer(walletConnector.address, fundAmount)
     
-        log(`WalletConnector funded with ${fundAmount} JUELS`)
+        // log(`WalletConnector funded with ${fundAmount} JUELS`)
 }
 
 module.exports.tags = ["all", "walletconnector"]

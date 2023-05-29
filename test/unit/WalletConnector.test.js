@@ -56,6 +56,8 @@ const { expect, assert } = require("chai");
           expect(blockHeight).to.not.be.null
           expect(time).to.not.be.null
           // expect(to).to.not.be.null
+
+          console.log(nonce.toString())
         })
       })
 

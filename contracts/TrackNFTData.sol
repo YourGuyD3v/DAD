@@ -59,17 +59,9 @@ contract TrackNFTData is ChainlinkClient  {
         );
 
         req.add(
-            "get", i_nftApiUrl);
-            
-        req.add("path", "items,id");
-        req.add("path", "items,id,asset_contract_address");
-        req.add("path", "items,id,asset_contract_address,token_id");
-        req.add("path", "items,id,asset_contract_address,token_id,name");
-        req.add("path", "items,id,asset_contract_address,token_id,name,description");
-        req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url");
-        req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url,price");
-        req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url,price,created_at");
-        req.add("path", "items,id,asset_contract_address,token_id,name,description,image_url,price,created_at,updated_at,owner");
+            "get", "https://fluent-smart-asphalt.ethereum-sepolia.discover.quiknode.pro/dab918dcf19dae58a972267bfacce198a77d42a5/");
+
+            req.add("qn_fetchN", "");
 
        return sendChainlinkRequestTo(i_oracle, req, i_fee);
     }
