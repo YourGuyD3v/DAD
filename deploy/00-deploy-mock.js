@@ -1,7 +1,7 @@
 const { network } = require("hardhat")
 
-const setLink = "0x779877A7B0D9E8603169DdbD7836e478b4624789"
-const setOrcals = "0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD"
+BASE_FEE = "250000000000000000" // 0.25;
+GAS_PRICE_LINK = 1e9 // link per gas;
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments
@@ -9,8 +9,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     chainId = network.config.chainId
 
     arguments = [
-        setLink,
-        setOrcals
+        BASE_FEE,
+        GAS_PRICE_LINK
     ]
 
     const linkToken = await deploy("LinkToken", {
@@ -20,7 +20,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         waitConfirmations: network.config.blockConfirmations || 1
     })
     log("------------------------------------------------------------")
-    const chainlinkClientTestHelper = await deploy("ChainlinkClientTestHelper", {
+    const vrfCoordinatorV2Mock = await deploy("VRFCoordinatorV2Mock", {
         from: deployer,
         args: arguments,
         log: true,
@@ -36,4 +36,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log("---------------------------------------------------------")
 }
 
-module.exports.tags = ["all", "mock"]
+module.exports.tags = ["all", "mocks"]

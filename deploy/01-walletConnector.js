@@ -11,27 +11,28 @@ module.exports = async ({getNamedAccounts, deployments}) => {
 
     let linkToken, mockOracle, linkTokenAddress, oracleAddress
 
-    if (chainId == 31337) {
-        linkToken = await ethers.getContract("LinkToken")
-        linkTokenAddress = linkToken.address
+    // if (chainId == 31337) {
+    //     linkToken = await ethers.getContract("LinkToken")
+    //     linkTokenAddress = linkToken.address
 
-        mockOracle = await ethers.getContract("MockOracle")
-        oracleAddress = mockOracle.address
-    } else {
-        oracleAddress = networkConfig[chainId]["oracle"]
-        linkTokenAddress = networkConfig[chainId]["linkToken"]
-        // linkToken = new ethers.Contract(linkTokenAddress, LINK_TOKEN_ABI, deployer)
-    }
+    //     mockOracle = await ethers.getContract("MockOracle")
+    //     oracleAddress = mockOracle.address
+    // } else {
+    //     oracleAddress = networkConfig[chainId]["oracle"]
+    //     linkTokenAddress = networkConfig[chainId]["linkToken"]
+    //     // linkToken = new ethers.Contract(linkTokenAddress, LINK_TOKEN_ABI, deployer)
+    // }
 
-    const jobId = ethers.utils.toUtf8Bytes(networkConfig[chainId]["jobId2"])
-    const fee = networkConfig[chainId]["fee"]
+    // const jobId = ethers.utils.toUtf8Bytes(networkConfig[chainId]["jobId2"])
+    // const fee = networkConfig[chainId]["fee"]
 
-    const args = [process.env.ETHERSCAN_API_KEY,
-        oracleAddress, 
-        jobId, 
-        fee, 
-        linkTokenAddress  
-    ]
+    // const args = [process.env.ETHERSCAN_API_KEY,
+    //     oracleAddress, 
+    //     jobId, 
+    //     fee, 
+    //     linkTokenAddress  
+    // ]
+    const args = []
     const walletConnector = await deploy("WalletConnector", {
         from: deployer,
         args: args,
