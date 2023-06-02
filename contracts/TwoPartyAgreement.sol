@@ -9,6 +9,7 @@ import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 error TwoPartyAgreement__NotTheBuyer();
 error TwoPartyAgreement__NotTheSeller();
 error TwoPartyAgreement__MustBeInProgress();
+error TwoPartyAgreement__InvalidDeliveryDate();
 
 contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
     // Enum, it tells the current status
@@ -113,6 +114,9 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint256 _price,
         uint256 _deliveryDate
     ) external {
+        if (_deliveryDate < block.timestamp) {
+            revert TwoPartyAgreement__InvalidDeliveryDate();
+        }
         i_agreements[s_agreementId] = Agreement(
             _terms,
             msg.sender,
@@ -206,6 +210,10 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     function getAgreementId() external view returns (uint256) {
         return s_agreementId;
+    }
+
+    function getInterval() public view returns (uint256) {
+        return interval;
     }
 
 }

@@ -30,8 +30,6 @@ module.exports = async ({getNamedAccounts, deployments}) => {
         networkConfig[chainId]["automationUpdateInterval"]
     ]
 
-    console.log(args)
-
     const twoPartyAgreement = await deploy("TwoPartyAgreement", {
         from: deployer,
         args: args,
