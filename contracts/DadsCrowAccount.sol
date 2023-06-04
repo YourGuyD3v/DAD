@@ -4,55 +4,87 @@ pragma solidity ^0.8.7;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./TwoPartyAgreement.sol";
 
-error DadsCrowAccount__InvalidAmountOrPas();
-error DadsCrowAccount__FundCantRelease();
+error DadsCrowAccount__InvalidAmountOrPasOrAgreementId();
 
 contract DadsCrowAccount is TwoPartyAgreement, ReentrancyGuard {
 
     /* State Variable */
     // Local Variables
-    uint256 private s_released;
-    address private s_beneficiary;
-    uint256 private s_start;
-    uint256 private s_duration;
-    uint256 private s_amount;
-    string private receipt;
     TwoPartyAgreement private twoPartyAgreement;
+    bool private s_released;
+    address private s_beneficiary;
+    uint256 private s_amount;
+    string internal _uniqueId;
+    uint256 internal _agreementId;
+    string private receipt;
 
-        constructor(address vrfCoordinatorV2,
+    constructor(
+        address vrfCoordinatorV2,
         bytes32 gasLane,
         uint64 subscriptionId,
         uint16 callbackGasLimit,
-        uint256 updateInterval) TwoPartyAgreement( 
-            vrfCoordinatorV2, 
-            gasLane, 
-            subscriptionId, 
-            callbackGasLimit, 
-            updateInterval 
-            ) {}
+        uint256 updateInterval
+    ) TwoPartyAgreement( 
+        vrfCoordinatorV2, 
+        gasLane, 
+        subscriptionId, 
+        callbackGasLimit, 
+        updateInterval 
+    ) {}
 
-     /////////////////
+    /////////////////
     /// Functions ///
-   /////////////////
+    /////////////////
 
-    function enterFund(uint256 _amount, string memory pas) public payable onlyBuyer(s_agreementId) returns (string memory) {
-        string memory uniqueId = twoPartyAgreement.setUniqueIdForRole(msg.sender, s_agreementId, pas);
-          bytes memory pasBytes = abi.encodePacked(pas);
-         bytes memory uniqueIdBytes = abi.encodePacked(uniqueId);
-        if (keccak256(pasBytes) != keccak256(uniqueIdBytes) && _amount <= 0 ) {
-            revert DadsCrowAccount__InvalidAmountOrPas();
+     function enterFund(uint256 _amount, string memory pas, uint256 agreementId) public payable onlyBuyer(s_agreementId) {
+        string memory uniqueId = twoPartyAgreement.setUniqueIdForRole(i_agreements[s_agreementId].seller, s_agreementId, pas);
+        bytes memory pasBytes = abi.encodePacked(pas);
+        bytes memory uniqueIdBytes = abi.encodePacked(uniqueId);
+        if (keccak256(pasBytes) != keccak256(uniqueIdBytes) && _amount <= 0 && s_agreementId != agreementId) {
+            revert DadsCrowAccount__InvalidAmountOrPasOrAgreementId();
         }
         s_amount = _amount;
+        _uniqueId = uniqueId;
+        _agreementId = agreementId;
     }
 
-    function receiveFund() internal  {
-        if (twoPartyAgreement.getHero(s_agreementId).s_hero && s_agreementId && uniqueId) {}
+    function fundRelease() internal nonReentrant {
+        if (
+            i_agreements[s_agreementId].status == TwoPartyAgreement.AgreementStatus.Created &&
+            i_agreements[s_agreementId].fundsReleased == false &&
+            s_agreementId == _agreementId &&
+            bytes(_uniqueId).length != 0 &&
+            i_agreements[s_agreementId].seller == twoPartyAgreement.getHero(s_agreementId)
+        ) {
+            s_beneficiary = i_agreements[s_agreementId].seller;
+            (bool success, ) = payable(s_beneficiary).call{value: s_amount}(""); // Transfer the funds to the seller
+            if (success) {
+            s_released = true;
+            i_agreements[s_agreementId].fundsReleased = true;
+            }
+        }
     }
- 
-    function moneyReturend() internal {}
+
+    function moneyReturned() internal {
+        if (
+            i_agreements[s_agreementId].status == TwoPartyAgreement.AgreementStatus.Cancelled &&
+            i_agreements[s_agreementId].fundsReleased == false &&
+            s_agreementId == _agreementId &&
+            bytes(_uniqueId).length != 0 &&
+            i_agreements[s_agreementId].seller == twoPartyAgreement.getHero(s_agreementId)
+        ) {
+            address buyer = i_agreements[s_agreementId].buyer;
+            (bool success, ) = payable(buyer).call{value: s_amount}("");// Return the funds to the buyer
+            if (success) {
+            s_released = false;
+            i_agreements[s_agreementId].fundsReleased = false;
+            }
+        }
+    }
 
     // View & Pure Functions
-    function beneficiary() public view  returns (address) {
+    function beneficiary(uint256 agreementId) public view returns (address) {
+        require(s_agreementId == agreementId, "");
         return s_beneficiary;
     }
 }

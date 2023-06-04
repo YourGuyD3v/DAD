@@ -21,6 +21,7 @@ const { assert, expect, AssertionError } = require("chai");
         twoPartyAgreement = twoPartyAgreementContract.connect(seller)
         interval = await twoPartyAgreement.getInterval()
       })
+      console.log(interval)
 
 
       describe("constructor", () => {

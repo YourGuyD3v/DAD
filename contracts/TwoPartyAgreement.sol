@@ -12,7 +12,7 @@ error TwoPartyAgreement__MustBeInProgress();
 error TwoPartyAgreement__InvalidDeliveryDate();
 error TwoPartyAgreement__DeliveryDateNotReachedYet();
 error TwoPartyAgreement__InvalidAgreementIdOrHeroAddress();
-error TwoPartyAgreement__NotEnoughEthSend();
+error TwoPartyAgreement__AgreementNotCreated();
 
 contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
     // Enum, it tells the current status
@@ -24,7 +24,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     // Struct to store Local Variables
     struct Agreement {
-        bytes32 terms;
+        string terms;
         address buyer;
         address seller;
         uint256 price;
@@ -43,9 +43,10 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
     uint32 private constant NUM_WORDS = 1;
 
     // Local Variables
-    uint256 internal s_agreementId = type(uint256).max;
+    uint256 internal s_agreementId;
     uint256 public immutable i_interval;
     uint256 public lastBlockNumber;
+    uint256 public agreementCounter = 0;
     address private s_hero;
 
     // Mapping
@@ -54,6 +55,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
     // Events
     event AgreementCreated(
         uint256 agreementId,
+        string terms,
         address indexed buyer,
         address indexed seller,
         uint256 price,
@@ -65,21 +67,21 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     // Modifier
     modifier onlyBuyer(uint256 _agreementId) {
-        if (msg.sender != i_agreements[_agreementId].buyer) {
+        if (msg.sender != i_agreements[s_agreementId].buyer) {
             revert TwoPartyAgreement__NotTheBuyer();
         }
         _;
     }
 
     modifier onlySeller(uint256 _agreementId) {
-        if (msg.sender != i_agreements[_agreementId].seller) {
+        if (msg.sender != i_agreements[s_agreementId].seller) {
             revert TwoPartyAgreement__NotTheSeller();
         }
         _;
     }
 
     modifier inProgress(uint256 _agreementId) {
-        if (i_agreements[_agreementId].status == AgreementStatus.Created) {
+        if (i_agreements[s_agreementId].status == AgreementStatus.Created) {
             revert TwoPartyAgreement__MustBeInProgress();
         }
         _;
@@ -113,7 +115,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
      */
 
     function createAgreement(
-        bytes32 _terms,
+        string memory _terms,
         address _seller,
         uint256 _price,
         uint256 _deliveryDate
@@ -130,26 +132,28 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
             AgreementStatus.Created,
             false
         );
-        emit AgreementCreated(s_agreementId, msg.sender, _seller, _price, _deliveryDate);
+        emit AgreementCreated(s_agreementId, _terms, msg.sender, _seller, _price, _deliveryDate);
     }
 
       function checkUpkeep(
         bytes memory /* checkData */
     )
         public
+        view
         override
         returns (bool upkeepNeeded, bytes memory /* performData */)
-    {
-        upkeepNeeded = (block.number - lastBlockNumber) > i_interval;
+    {   
+        upkeepNeeded = i_agreements[s_agreementId].status == AgreementStatus.Created;
         return (upkeepNeeded, "0x0");
     }
 
-    function performUpkeep(bytes calldata /* performData */) external override {
-        if ((block.number - lastBlockNumber) > i_interval) {
-            lastBlockNumber = block.number;
-        }
-  
-            uint256 requestId = i_vrfCoordinator.requestRandomWords(
+       function performUpkeep(bytes calldata /* performData */) external override {
+         (bool upkeepNeeded, ) = checkUpkeep("");
+         if (!upkeepNeeded) {
+            revert TwoPartyAgreement__AgreementNotCreated();
+         }
+
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, // keyHash
             i_subscriptionId,
             i_callbackGasLimit,
@@ -160,18 +164,13 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         emit RequestAgreementId(requestId);
     }
 
+
     function fulfillRandomWords(
         uint256 /* requestId */,
         uint256[] memory randomWords
     ) internal virtual override {
-        uint256 indexedRequestId = randomWords[0] % 9999999999999999;
-        uint256 agreementId = indexedRequestId;
-        for (uint256 i = 0; i < agreementId; i++) {
-            indexedRequestId = randomWords[0] % 99999999999999999;
-            agreementId = indexedRequestId;
-        }
+           uint256 agreementId = randomWords[0] % (10**18); // Generate a random agreement ID within the range of 0 to 10^18
         s_agreementId = agreementId;
-
     }
 
     function setUniqueIdForRole(address hero, uint256 _agreementId, string memory uniqueId) external inProgress(_agreementId) returns (string memory) {
@@ -227,7 +226,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return i_interval;
     }
 
-    function getTerms(uint256 agreementId) public view  returns (bytes32) {
+    function getTerms(uint256 agreementId) public view  returns (string memory) {
         return i_agreements[agreementId].terms;
     }
 

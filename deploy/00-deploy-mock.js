@@ -13,27 +13,17 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         GAS_PRICE_LINK
     ]
 
-    const linkToken = await deploy("LinkToken", {
-        from: deployer,
-        args: [],
-        log: true,
-        waitConfirmations: network.config.blockConfirmations || 1
-    })
-    log("------------------------------------------------------------")
-    const vrfCoordinatorV2Mock = await deploy("VRFCoordinatorV2Mock", {
-        from: deployer,
-        args: arguments,
-        log: true,
-        waitConfirmations: network.config.blockConfirmations || 1
-    })
-    log("--------------------------------------------------------")
-    const mockOracle = await deploy("MockOracle", {
-        from: deployer,
-        args: [linkToken.address],
-        log: true,
-        waitConfirmations: network.config.blockConfirmations || 1
-    })
-    log("---------------------------------------------------------")
+    if(chainId == 31337) {
+        log("Deploying the mocks...")
+        log("------------------------------------------------------------")
+        const vrfCoordinatorV2Mock = await deploy("VRFCoordinatorV2Mock", {
+            from: deployer,
+            args: arguments,
+            log: true,
+            waitConfirmations: network.config.blockConfirmations || 1
+        })
+        log("--------------------------------------------------------------")
+    }
 }
 
 module.exports.tags = ["all", "mocks"]
