@@ -35,7 +35,7 @@ networkConfig = {
         oracle: "0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD",
         jobId1: "ca98366cc7314957b8c012c72f05aeeb",
         jobId2: "7da2702f37fd48e5b1b9a5715e3509b6",
-        subscriptionId: "777",
+        subscriptionId: "1403",
         fee: "100000000000000000",
         fundAmount: "100000000000000000", // 0.1
         automationUpdateInterval: "10",

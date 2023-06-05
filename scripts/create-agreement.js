@@ -19,6 +19,14 @@ async function createAgreement() {
     console.log(`Terms: ${termtx}`)
     console.log(`Agreement ID: ${getAgreementId}`)
     console.log(`seller address: ${sellerAddress}`)
+    const tx3 = await twoPartyAgreement.createAgreement("call me papa!", "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", Price, validDeliveryDate )
+    await tx3.wait(1)
+    const agreementIdx = await twoPartyAgreement.getAgreementId()
+    const termtxx = await twoPartyAgreement.getTerms(agreementIdx)
+    const sellerAddressx = await twoPartyAgreement.getSellerById(agreementIdx)
+    console.log(`Terms: ${termtxx}`)
+    console.log(`Agreement ID: ${getAgreementId}`)
+    console.log(`seller address: ${sellerAddressx}`)
 
 }
 

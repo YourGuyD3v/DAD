@@ -8,11 +8,12 @@ import "@chainlink/contracts/src/v0.8/AutomationCompatible.sol";
 // Errors 
 error TwoPartyAgreement__NotTheBuyer();
 error TwoPartyAgreement__NotTheSeller();
-error TwoPartyAgreement__MustBeInProgress();
+error TwoPartyAgreement__AgreementIsNotCreatedYet();
 error TwoPartyAgreement__InvalidDeliveryDate();
-error TwoPartyAgreement__DeliveryDateNotReachedYet();
 error TwoPartyAgreement__InvalidAgreementIdOrHeroAddress();
-error TwoPartyAgreement__AgreementNotCreated();
+error TwoPartyAgreement__UpkeepNotNeeded();
+error TwoPartyAgreement_AgreementMustBeCompleted();
+error TwoPartyAgreement__YouCantCancelTheAgreement();
 
 contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
     // Enum, it tells the current status
@@ -20,7 +21,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         Created,
         Completed,
         Cancelled
-    }
+    } // 
 
     // Struct to store Local Variables
     struct Agreement {
@@ -44,9 +45,9 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     // Local Variables
     uint256 internal s_agreementId;
-    uint256 public immutable i_interval;
-    uint256 public lastBlockNumber;
     uint256 public agreementCounter = 0;
+    uint256[] private requestIds;
+    uint256 private s_lastRequestId;
     address private s_hero;
 
     // Mapping
@@ -62,7 +63,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint256 deliveryDate
     );
     event AgreementCompleted(uint256 indexed agreementId);
-    event AgreementCancelled(uint256 indexed agreementId);
+    event AgreementCancelledAndDelete(uint256 indexed agreementId);
     event RequestAgreementId(uint256 indexed requestId);
 
     // Modifier
@@ -81,8 +82,8 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
     }
 
     modifier inProgress(uint256 _agreementId) {
-        if (i_agreements[s_agreementId].status == AgreementStatus.Created) {
-            revert TwoPartyAgreement__MustBeInProgress();
+        if (i_agreements[s_agreementId].status != AgreementStatus.Created) {
+            revert TwoPartyAgreement__AgreementIsNotCreatedYet();
         }
         _;
     }
@@ -91,15 +92,12 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         address vrfCoordinatorV2,
         bytes32 gasLane,
         uint64 subscriptionId,
-        uint16 callbackGasLimit,
-        uint256 updateInterval
+        uint16 callbackGasLimit
     ) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
-        i_interval = updateInterval;
-        lastBlockNumber = block.number;
     }
 
     /////////////////
@@ -135,6 +133,11 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         emit AgreementCreated(s_agreementId, _terms, msg.sender, _seller, _price, _deliveryDate);
     }
 
+    /**
+     * @dev This is the function that the Chainlink Keeper nodes call
+     * they look for `upkeepNeeded` to return True.
+     * the agreement created should be true for this to return true.
+     */
       function checkUpkeep(
         bytes memory /* checkData */
     )
@@ -143,15 +146,21 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         override
         returns (bool upkeepNeeded, bytes memory /* performData */)
     {   
-        upkeepNeeded = i_agreements[s_agreementId].status == AgreementStatus.Created;
+        bool isAgreement = i_agreements[s_agreementId].status == AgreementStatus.Created;
+        upkeepNeeded = (isAgreement);
         return (upkeepNeeded, "0x0");
     }
 
+    /**
+     * @dev Once `checkUpkeep` is returning `true`, this function is called
+     * and it kicks off a Chainlink VRF call to get a random AgreementId.
+     */
        function performUpkeep(bytes calldata /* performData */) external override {
          (bool upkeepNeeded, ) = checkUpkeep("");
          if (!upkeepNeeded) {
-            revert TwoPartyAgreement__AgreementNotCreated();
+            revert TwoPartyAgreement__UpkeepNotNeeded();
          }
+        agreementCounter = agreementCounter + 1;
 
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, // keyHash
@@ -160,21 +169,26 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
             REQUEST_CONFIRMATIONS,
             NUM_WORDS
         );
+        requestIds.push(requestId);
+        s_lastRequestId = requestId;
 
         emit RequestAgreementId(requestId);
     }
 
-
+    /**
+     * @dev This is the function that Chainlink VRF node
+     * calls to give random Agreement ID.
+     */
     function fulfillRandomWords(
         uint256 /* requestId */,
         uint256[] memory randomWords
-    ) internal virtual override {
-           uint256 agreementId = randomWords[0] % (10**18); // Generate a random agreement ID within the range of 0 to 10^18
+    ) internal override {
+       uint256 agreementId = (randomWords[0] % s_lastRequestId) + 1; // Generate a random agreement ID within the range of 0 to 10^18
         s_agreementId = agreementId;
     }
 
     function setUniqueIdForRole(address hero, uint256 _agreementId, string memory uniqueId) external inProgress(_agreementId) returns (string memory) {
-        if (s_agreementId != _agreementId && i_agreements[_agreementId].seller != hero) {
+        if (s_agreementId != _agreementId || i_agreements[_agreementId].seller != hero) {
             revert TwoPartyAgreement__InvalidAgreementIdOrHeroAddress();
         }
         s_hero = hero;
@@ -184,29 +198,28 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
     function confirmDelivery(
         uint256 _agreementId
     ) external onlyBuyer(_agreementId) inProgress(_agreementId) {
-        if (block.timestamp >= i_agreements[_agreementId].deliveryDate) {
-            revert TwoPartyAgreement__DeliveryDateNotReachedYet();
-        }
         i_agreements[_agreementId].status = AgreementStatus.Completed;
-        i_agreements[_agreementId].fundsReleased = true;
         emit AgreementCompleted(_agreementId);
     }
 
     function cancelAgreement(
         uint256 _agreementId
-    ) external onlyBuyer(_agreementId) inProgress(_agreementId) {
+    ) external onlyBuyer(_agreementId) {
+        if (i_agreements[_agreementId].status == AgreementStatus.Completed) {
+            revert TwoPartyAgreement__YouCantCancelTheAgreement();
+        }
         i_agreements[_agreementId].status = AgreementStatus.Cancelled;
-        emit AgreementCancelled(_agreementId);
+        delete i_agreements[_agreementId];
+        emit AgreementCancelledAndDelete(_agreementId);
     }
 
-    function releaseFunds(uint256 _agreementId) external onlySeller(_agreementId) {
-        require(
-            i_agreements[_agreementId].status == AgreementStatus.Completed,
-            "Agreement must be completed"
-        );
-        require(i_agreements[_agreementId].fundsReleased == false, "Funds already released");
-        i_agreements[_agreementId].fundsReleased = true;
-    }
+    // function releaseFunds(uint256 _agreementId) external onlySeller(_agreementId) {     
+    //     if (i_agreements[_agreementId].status != AgreementStatus.Completed) {
+    //         revert TwoPartyAgreement_AgreementMustBeCompleted();
+    //     }
+    //     require(i_agreements[_agreementId].fundsReleased == false, "Funds already released");
+    //     i_agreements[_agreementId].fundsReleased = true;
+    // }
 
     // View / Pure Functions
 
@@ -222,10 +235,6 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         return s_agreementId;
     }
 
-    function getInterval() public view returns (uint256) {
-        return i_interval;
-    }
-
     function getTerms(uint256 agreementId) public view  returns (string memory) {
         return i_agreements[agreementId].terms;
     }
@@ -234,5 +243,18 @@ contract TwoPartyAgreement is VRFConsumerBaseV2, AutomationCompatibleInterface {
         require(s_agreementId == agreementId, "valid");
         return s_hero;
     }
+
+    function getAgreementStatus(uint256 _agreementId) external view returns (AgreementStatus) {
+    return i_agreements[_agreementId].status;
+
+    }
+
+  function getCallbackGasLimit() external view returns (uint16) {
+    return i_callbackGasLimit;
+  }
+
+  function getPrice(uint256 agreementId) public view  returns (uint256) {
+    return i_agreements[agreementId].price;
+  }
 
 }
