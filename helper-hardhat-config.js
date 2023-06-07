@@ -7,6 +7,7 @@ networkConfig = {
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "1000000000000000000",
         automationUpdateInterval: "10",
+        twoPartyAgreementAddress:"0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", 
     },
     31337: {
         name: "localhost",
@@ -17,6 +18,7 @@ networkConfig = {
         fundAmount: "1000000000000000000",
         automationUpdateInterval: "10",
         ethUsdPriceFeed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+        twoPartyAgreementAddress:"0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", 
     },
     1: {
         name: "mainnet",
@@ -69,11 +71,15 @@ const DECIMALS = "18"
 const INITIAL_PRICE = "200000000000000000000"
 const VERIFICATION_BLOCK_CONFIRMATIONS = 6
 const developmentChains = ["hardhat", "localhost"]
+const frontEndContractsFile = "../softrock-front-end/constants/ContractAddress.json"
+const frontEndAbiLocation = "../softrock-front-end/constants/"
 
 module.exports = {
     networkConfig,
     developmentChains,
     DECIMALS,
     INITIAL_PRICE,
-    VERIFICATION_BLOCK_CONFIRMATIONS
+    VERIFICATION_BLOCK_CONFIRMATIONS,
+    frontEndContractsFile,
+    frontEndAbiLocation
 }

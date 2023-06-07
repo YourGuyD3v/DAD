@@ -27,6 +27,7 @@ module.exports = async ({getNamedAccounts, deployments}) => {
         networkConfig[chainId]["keyHash"],
         subscriptionId,
         networkConfig[chainId]["callbackGasLimit"],
+        networkConfig[chainId]["twoPartyAgreementAddress"]
     ]
 
     const dadsAccount = await deploy("DadsAccount", {
