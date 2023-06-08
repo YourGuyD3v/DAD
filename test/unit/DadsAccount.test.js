@@ -13,7 +13,7 @@ const { assert, expect } = require("chai")
       const terms = ethers.utils.formatBytes32String("term")
 
       beforeEach(async () => {
-        [buyer, seller] = await ethers.getSigners()
+        [buyer, seller, player] = await ethers.getSigners()
         await deployments.fixture(["all"])
         vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock")
         twoPartyAgreementContract = await ethers.getContract("TwoPartyAgreement")
@@ -21,8 +21,7 @@ const { assert, expect } = require("chai")
         twoPartyAgreement = twoPartyAgreementContract.connect(seller)
         await twoPartyAgreement.requestAgreementId()
         generatedId = await twoPartyAgreement.generatedId()
-        await twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId)
-
+        await twoPartyAgreement.createAgreement("apple" ,terms, seller.address, Price, validDeliveryDate, generatedId)
       })
 
       describe("constructor", () => {
@@ -42,19 +41,28 @@ const { assert, expect } = require("chai")
         it("accepts the funds from buyer", async () => {
           const funded = await dadsAccount.enterFunds(Price, generatedId)
           const balance = await dadsAccount.getAmount(generatedId)
-          assert(balance, Price)
+          assert.equal(balance.toString(), Price.toString())
         })
     })
 
     describe("fundRelease", () => {
-      it("accepts the funds from buyer", async () => {
+      it("release the funds", async () => {
         const funded = await dadsAccount.enterFunds(Price, generatedId)
         const balance = await dadsAccount.getAmount(generatedId)
-        await dadsAccount.connect(seller)
-        const withdraw = await dadsAccount.fundWithdraw(generatedId)
-        const currectBalance = await dadsAccount.getAmount(generatedId)
-        assert(currectBalance, 0)
+        const tx = await dadsAccount.connect(player)
+        const withdraw = await tx.fundWithdraw(generatedId)
+        const currectBalance = await tx.getAmount(generatedId)
+        assert.equal(balance.toString(), "0")
 
+      })
+
+      it("Only seller can realse the fund", async () => {
+        const funded = await dadsAccount.enterFunds(Price, generatedId)
+        const balance = await dadsAccount.getAmount(generatedId)
+        const tx = await dadsAccount.connect(player)
+        const withdraw = await tx.fundWithdraw(generatedId)
+        const currectBalance = await tx.getAmount(generatedId)
+        assert.notEqual(currectBalance.toString(), "0")
       })
     })
 
@@ -63,9 +71,9 @@ const { assert, expect } = require("chai")
         const funded = await dadsAccount.enterFunds(Price, generatedId)
         const balance = await dadsAccount.getAmount(generatedId)
         const cancled = await twoPartyAgreement.cancelAgreement(generatedId)
-        const moneyReturned = await dadsAccount.moneyReturned()
+        const moneyReturned = await dadsAccount.fundReturned()
         const currectBalance = await dadsAccount.getAmount(generatedId)
-        assert(currectBalance, 0)
+        assert.equal(currectBalance.toString(), "0")
       })
     })
 

@@ -35,8 +35,7 @@ networkConfig = {
         callbackGasLimit: "50000", // 500.000 Gas
         vrfWrapper: "0xab18414CD93297B0d12ac29E63Ca20f515b3DB46",
         oracle: "0x6090149792dAAeE9D1D568c9f9a6F6B46AA29eFD",
-        jobId1: "ca98366cc7314957b8c012c72f05aeeb",
-        jobId2: "7da2702f37fd48e5b1b9a5715e3509b6",
+        jobId: "ca98366cc7314957b8c012c72f05aeeb",
         subscriptionId: "1403",
         fee: "100000000000000000",
         fundAmount: "100000000000000000", // 0.1
@@ -71,15 +70,10 @@ const DECIMALS = "18"
 const INITIAL_PRICE = "200000000000000000000"
 const VERIFICATION_BLOCK_CONFIRMATIONS = 6
 const developmentChains = ["hardhat", "localhost"]
-const frontEndContractsFile = "../softrock-front-end/constants/ContractAddress.json"
-const frontEndAbiLocation = "../softrock-front-end/constants/"
-
 module.exports = {
     networkConfig,
     developmentChains,
     DECIMALS,
     INITIAL_PRICE,
     VERIFICATION_BLOCK_CONFIRMATIONS,
-    frontEndContractsFile,
-    frontEndAbiLocation
 }

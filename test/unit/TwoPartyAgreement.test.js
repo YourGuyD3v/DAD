@@ -32,33 +32,33 @@ const { assert, expect } = require("chai")
 
       describe("createAgreement", () => {
         it("reverts when invalid generatedId, and invalid year,date passed to the function", async () => {
-          await expect (twoPartyAgreement.createAgreement(terms, seller.address, Price, invalidDeliveryDate, generatedId )).to.be.revertedWith(
-            "TwoPartyAgreement__InvalidDeliveryDate")
-            await expect (twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, "1234" )).to.be.revertedWith(
-              "TwoPartyAgreement__InvalidDeliveryDate")
+          await expect (twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, invalidDeliveryDate, generatedId )).to.be.revertedWith(
+            "TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId")
+            await expect (twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, "1234" )).to.be.revertedWith(
+              "TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId")
           })
 
         it("emits the event and stores the agreementId", async () => {
-          await expect (twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId )).to.emit(
+          await expect (twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId )).to.emit(
             twoPartyAgreement, "AgreementCreated"
           )
 
           const id = await twoPartyAgreement.getAgreementId()
 
-          assert(id, generatedId)
+          assert.equal(id.toString(), generatedId.toString())
           
         })
       })
 
       describe("fulfillRandomWords", () => {
       it("should call fulfillRandomWords with a valid requestId", async () => {
-        await twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId);
+        await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId);
         const tx = await twoPartyAgreement.requestAgreementId();
         assert.exists(tx, "Transaction should exist");
       })
       
       it("should return random agreement ID", async () => {
-        await twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId)
+        await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId)
         const tx = await twoPartyAgreement.requestAgreementId()
         const id = await twoPartyAgreement.getAgreementId()
         expect(id).to.equal(generatedId)
@@ -68,7 +68,7 @@ const { assert, expect } = require("chai")
 
       describe("confirmDelivery", () => {
         it('should set the agreement status to Completed', async function () {
-          await twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId)
+          await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId)
           const id = await twoPartyAgreement.getAgreementId()
           await twoPartyAgreement.confirmDelivery(id)
           const agreementStatus = await twoPartyAgreement.getAgreementStatus(id)
@@ -83,7 +83,7 @@ const { assert, expect } = require("chai")
         })
 
           it("emits event on confirming the Delivery", async () => {
-            await twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId)
+            await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId)
             const id = await twoPartyAgreement.getAgreementId()
             expect ( await twoPartyAgreement.confirmDelivery(id)).to.emit(
               twoPartyAgreement, "AgreementCompleted"
@@ -91,20 +91,43 @@ const { assert, expect } = require("chai")
         })
       })
 
-      describe("cancelAgreement", () => {
-        it("reverts if agreement status is not Completed", async () => {
-          const tx = await twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId)
+      describe("cancelAgreementByBuyer", () => {
+        it("reverts if agreement status is Completed", async () => {
+          const tx = await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId)
           const id = await twoPartyAgreement.getAgreementId()
           const confirmDelivery = await twoPartyAgreement.confirmDelivery(id)
-          await expect ( twoPartyAgreement.cancelAgreement(id)).to.be.revertedWith(
+          await expect ( twoPartyAgreement.cancelAgreementByBuyer(id)).to.be.revertedWith(
             "TwoPartyAgreement__YouCantCancelTheAgreement"
           )
           
         })
           it("should delete the agreement and emits the event", async () => {
-            const tx = await twoPartyAgreement.createAgreement(terms, seller.address, Price, validDeliveryDate, generatedId)
+            const tx = await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId)
             const id = await twoPartyAgreement.getAgreementId()
-            expect (await twoPartyAgreement.cancelAgreement(id)).to.emit(
+            expect (await twoPartyAgreement.cancelAgreementByBuyer(id)).to.emit(
+              twoPartyAgreement, "AgreementCancelledAndDelete"
+            ).withArgs(generatedId)
+            const agreementStatus = await twoPartyAgreement.getAgreementStatus(id)
+            assert.equal(agreementStatus, 0)
+          })
+      })
+
+      describe("cancelAgreementBySeller", () => {
+        it("reverts if agreement status is Completed", async () => {
+          const tx = await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId)
+          const id = await twoPartyAgreement.getAgreementId()
+          const confirmDelivery = await twoPartyAgreement.confirmDelivery(id)
+          const connect = await twoPartyAgreement.connect(seller)
+          await expect ( connect.cancelAgreementBySeller(id)).to.be.revertedWith(
+            "TwoPartyAgreement__youCantCancelTheAgreement"
+          )
+          
+        })
+          it("should delete the agreement and emits the event", async () => {
+            const tx = await twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, generatedId)
+            const id = await twoPartyAgreement.getAgreementId()
+            const connect = await twoPartyAgreement.connect(seller)
+            expect (await connect.cancelAgreementBySeller(id)).to.emit(
               twoPartyAgreement, "AgreementCancelledAndDelete"
             ).withArgs(generatedId)
             const agreementStatus = await twoPartyAgreement.getAgreementStatus(id)

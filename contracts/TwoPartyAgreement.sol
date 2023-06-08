@@ -8,11 +8,12 @@ import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 error TwoPartyAgreement__NotTheBuyer();
 error TwoPartyAgreement__NotTheSeller();
 error TwoPartyAgreement__AgreementIsNotCreatedYet();
-error TwoPartyAgreement__InvalidDeliveryDate();
+error TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId();
 error TwoPartyAgreement__InvalidAgreementIdOrHeroAddress();
 error TwoPartyAgreement__UpkeepNotNeeded();
 error TwoPartyAgreement_AgreementMustBeCompleted();
 error TwoPartyAgreement__YouCantCancelTheAgreement();
+error TwoPartyAgreement__youCantCancelTheAgreement();
 
 contract TwoPartyAgreement is VRFConsumerBaseV2 {
     // Enum, it tells the current status
@@ -24,6 +25,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
 
     // Struct to store Local Variables
     struct Agreement {
+        string product;
         string terms;
         address buyer;
         address seller;
@@ -54,7 +56,8 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
 
     // Events
     event AgreementCreated(
-        uint256 agreementId,
+        string _product,
+        uint256 indexed agreementId,
         string terms,
         address indexed buyer,
         address indexed seller,
@@ -112,6 +115,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
      */
 
     function createAgreement(
+        string memory _product,
         string memory _terms,
         address _seller,
         uint256 _price,
@@ -119,9 +123,10 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         uint256 agreementId
     ) public {
         if (_deliveryDate < block.timestamp || agreementId != generatedId ) {
-            revert TwoPartyAgreement__InvalidDeliveryDate();
+            revert TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId();
         }
         i_agreements[agreementId] = Agreement(
+            _product,
             _terms,
             msg.sender,
             _seller,
@@ -131,12 +136,11 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
             false
         );
         s_agreementId = agreementId;
-        emit AgreementCreated(agreementId, _terms, msg.sender, _seller, _price, _deliveryDate);
+        emit AgreementCreated(_product, agreementId, _terms, msg.sender, _seller, _price, _deliveryDate);
     }
 
     /**
-     * @dev Once `checkUpkeep` is returning `true`, this function is called
-     * and it kicks off a Chainlink VRF call to get a random AgreementId.
+     * @dev requestAgreementId kicks off a Chainlink VRF call to get a random AgreementId.
      */
        function requestAgreementId() external {
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
@@ -168,6 +172,9 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
                generatedId = indexOfAgreementId;
     }
 
+        /**
+     * @dev buyer confirms the delivery so seller can withraw funds
+     */
     function confirmDelivery(
         uint256 _agreementId
     ) external onlyBuyer(_agreementId) inProgress(_agreementId) {
@@ -175,7 +182,10 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         emit AgreementCompleted(_agreementId);
     }
 
-    function cancelAgreement(
+        /**
+     * @dev buyer can cancel the agreement
+     */
+    function cancelAgreementByBuyer(
         uint256 _agreementId
     ) external onlyBuyer(_agreementId) {
         if (i_agreements[_agreementId].status == AgreementStatus.Completed) {
@@ -186,10 +196,16 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         emit AgreementCancelledAndDelete(_agreementId);
     }
 
+    /**
+     * @dev seller can cancel the agreement
+     */
     function cancelAgreementBySeller(uint256 _agreementId) external onlySeller(_agreementId){
-        if (i_agreements[_agreementId].status != AgreementStatus.Completed) {}
+        if (i_agreements[_agreementId].status == AgreementStatus.Completed ) {
+           revert TwoPartyAgreement__youCantCancelTheAgreement();
+        }
         i_agreements[_agreementId].status = AgreementStatus.Cancelled;
         delete i_agreements[_agreementId];
+        emit AgreementCancelledAndDelete(_agreementId);
     }
 
     // View / Pure Functions

@@ -41,17 +41,21 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
     /// Functions ///
     /////////////////
 
-function enterFunds(uint256 _amount, uint256 agreementId) public payable {
+    /**
+     * @dev buyer can fund the money 
+     */
+    function enterFunds(uint256 _amount, uint256 agreementId) public payable {
     uint256 setPrice = twoPartyAgreement.getPrice(agreementId);
     if (_amount != setPrice) {
         revert DadsAccount__InvalidAmount();
     }
     s_amounts[agreementId] = _amount;
     _agreementId = agreementId;
-}
+    }
 
-
-
+    /**
+     * @dev seller can withdraw funds 
+     */
     function fundWithdraw(uint256 agreementId) external nonReentrant onlySeller(_agreementId) {
         if (
             i_agreements[s_agreementId].status == TwoPartyAgreement.AgreementStatus.Created ||
@@ -69,7 +73,10 @@ function enterFunds(uint256 _amount, uint256 agreementId) public payable {
         }
     }
 
-    function moneyReturned() external nonReentrant {
+    /**
+     * @dev buyer can get money back on cancel agreement 
+     */
+    function fundReturned() external nonReentrant {
         if (
             i_agreements[s_agreementId].status == TwoPartyAgreement.AgreementStatus.Cancelled &&
             i_agreements[s_agreementId].fundsReleased == false &&
