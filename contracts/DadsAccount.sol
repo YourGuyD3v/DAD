@@ -15,7 +15,7 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
     /* State Variable */
     // Local Variables
     TwoPartyAgreement private twoPartyAgreement;
-    bool private s_released;
+    bool public s_released;
     string internal _uniqueId;
     uint256 internal _agreementId;
     string private receipt;
@@ -75,7 +75,7 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
             (bool success, ) = payable(seller).call{value: setPrice}(""); // Transfer the funds to the seller
             if (success) {
             s_released = true;
-            i_agreements[s_agreementId].fundsReleased = true;
+            i_agreements[agreementId].fundsReleased = true;
             }
         }
     }
@@ -86,7 +86,6 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
     function fundReturned(uint256 agreementId) external nonReentrant {
         if (
             twoPartyAgreement.getAgreementStatus(agreementId) == TwoPartyAgreement.AgreementStatus.Cancelled ||
-            twoPartyAgreement.getFundReleaseUpdate(agreementId) == false ||
             msg.sender == twoPartyAgreement.getBuyerById(agreementId) 
         ) {
             address buyer = twoPartyAgreement.getBuyerById(agreementId);

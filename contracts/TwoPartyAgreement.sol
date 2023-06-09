@@ -197,6 +197,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
             revert TwoPartyAgreement__YouCantCancelTheAgreement();
         }
         i_agreements[_agreementId].status = AgreementStatus.Cancelled;
+            i_agreements[_agreementId].fundsReleased = true;
         delete i_agreements[_agreementId];
         emit AgreementCancelledAndDelete(_agreementId);
     }
@@ -209,6 +210,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
            revert TwoPartyAgreement__youCantCancelTheAgreement();
         }
         i_agreements[_agreementId].status = AgreementStatus.Cancelled;
+            i_agreements[_agreementId].fundsReleased = true;
         delete i_agreements[_agreementId];
         emit AgreementCancelledAndDelete(_agreementId);
     }
