@@ -29,7 +29,7 @@
 
 ```
 git clone https://github.com/YourGuyD3v/softRock.git
-cd hardhat-smartcontract-lottery-fcc
+cd DAD
 yarn
 ```
 
