@@ -34,46 +34,51 @@ const { assert, expect } = require("chai")
 
       describe("enterFund", () => {
         it("reverts if unique ID is inavlid, amount is not equal to price enter at the time of agreement", async () => {
-          await expect (dadsAccount.enterFunds(0, generatedId)).to.be.revertedWith(
+          await expect (dadsAccount.enterFunds(generatedId)).to.be.revertedWith(
             "DadsAccount__InvalidAmount"
           )
         })
         it("accepts the funds from buyer", async () => {
-          const funded = await dadsAccount.enterFunds(Price, generatedId)
-          const balance = await dadsAccount.getAmount(generatedId)
-          assert.equal(balance.toString(), Price.toString())
+          const funded = await dadsAccount.enterFunds(generatedId, {
+            value: Price,
+          })
+          const updatedBalance = await ethers.provider.getBalance(buyer.address)
+          const expectedBalance = updatedBalance.sub(Price)
+          expect(updatedBalance.toString() == expectedBalance.toString())
         })
     })
 
     describe("fundRelease", () => {
       it("release the funds", async () => {
-        const funded = await dadsAccount.enterFunds(Price, generatedId)
-        const balance = await dadsAccount.getAmount(generatedId)
-        const tx = await dadsAccount.connect(player)
+        const funded = await dadsAccount.enterFunds(generatedId, {
+          value: Price,
+        })
+        const tx = await dadsAccount.connect(seller)
         const withdraw = await tx.fundWithdraw(generatedId)
-        const currectBalance = await tx.getAmount(generatedId)
-        assert.equal(balance.toString(), "0")
-
       })
 
       it("Only seller can realse the fund", async () => {
-        const funded = await dadsAccount.enterFunds(Price, generatedId)
-        const balance = await dadsAccount.getAmount(generatedId)
-        const tx = await dadsAccount.connect(player)
-        const withdraw = await tx.fundWithdraw(generatedId)
-        const currectBalance = await tx.getAmount(generatedId)
-        assert.notEqual(currectBalance.toString(), "0")
+        const funded = await dadsAccount.enterFunds(generatedId, {
+          value: Price,
+        })
+        const tx = await dadsAccount.connect(seller)
+        const withdraaw = await tx.fundWithdraw(generatedId)
+        const updatedBalance = await ethers.provider.getBalance(seller.address)
+        const expectedBalance = updatedBalance.sub(Price)
+        assert.notEqual(expectedBalance.toString(), "0")
       })
     })
 
     describe("moneyReturned", () => {
       it("return money on the cancelation of agreement", async () => {
-        const funded = await dadsAccount.enterFunds(Price, generatedId)
-        const balance = await dadsAccount.getAmount(generatedId)
-        const cancled = await twoPartyAgreement.cancelAgreement(generatedId)
-        const moneyReturned = await dadsAccount.fundReturned()
-        const currectBalance = await dadsAccount.getAmount(generatedId)
-        assert.equal(currectBalance.toString(), "0")
+        const funded = await dadsAccount.enterFunds(generatedId, {
+          value: Price,
+        })
+        const cancled = await twoPartyAgreement.cancelAgreementByBuyer(generatedId)
+        const moneyReturned = await dadsAccount.fundReturned(generatedId)
+        const updatedBalance = await ethers.provider.getBalance(buyer.address)
+        const expectedBalance = updatedBalance.sub(Price)
+        expect(expectedBalance.toString() ==  updatedBalance.toString())
       })
     })
 

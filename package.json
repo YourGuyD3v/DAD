@@ -1,4 +1,6 @@
 {
+  "name": "DAD (decentralized agreement dapp)",
+  "version": "0.1.0",
   "devDependencies": {
     "@chainlink/test-helpers": "^0.0.7-alpha",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",

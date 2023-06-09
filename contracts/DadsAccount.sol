@@ -6,6 +6,10 @@ import "./TwoPartyAgreement.sol";
 
 error DadsAccount__InvalidAmount();
 
+/**@title DAds Account
+ * @author Shurjeel khan
+ * @notice This contract is for storing money
+ */
 contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
 
     /* State Variable */
@@ -16,11 +20,14 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
     uint256 internal _agreementId;
     string private receipt;
 
-    mapping(uint256 => address) private s_beneficiaries;
-    mapping(uint256 => uint256) private s_amounts;
-
         // Modifier
-    modifier onlySeller(uint256 agreementId) override {_;}
+     modifier onlySeller(uint256 agreementId) override  {
+    if (msg.sender != twoPartyAgreement.getSellerById(agreementId)) {
+        revert TwoPartyAgreement__NotTheSeller();
+    }
+    _;
+     }
+
 
     constructor(
         address vrfCoordinatorV2,
@@ -42,62 +49,53 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
     /////////////////
 
     /**
-     * @dev buyer can fund the money 
+     * @dev buyer can fund
      */
-    function enterFunds(uint256 _amount, uint256 agreementId) public payable {
-    uint256 setPrice = twoPartyAgreement.getPrice(agreementId);
-    if (_amount != setPrice) {
+    function enterFunds(uint256 agreementId) public payable {
+     uint256 setPrice = twoPartyAgreement.getPrice(agreementId);
+    if (msg.value != setPrice) {
         revert DadsAccount__InvalidAmount();
     }
-    s_amounts[agreementId] = _amount;
     _agreementId = agreementId;
+
     }
 
-    /**
-     * @dev seller can withdraw funds 
+     /**
+     * @dev seller can withdraw
      */
-    function fundWithdraw(uint256 agreementId) external nonReentrant onlySeller(_agreementId) {
+    function fundWithdraw(uint256 agreementId) external nonReentrant onlySeller(agreementId) {
         if (
-            i_agreements[s_agreementId].status == TwoPartyAgreement.AgreementStatus.Created ||
-            i_agreements[s_agreementId].status == TwoPartyAgreement.AgreementStatus.Completed ||
-            i_agreements[s_agreementId].fundsReleased == false ||
-            s_agreementId == agreementId
+            twoPartyAgreement.getAgreementStatus(agreementId) == TwoPartyAgreement.AgreementStatus.Completed ||
+            twoPartyAgreement.getFundReleaseUpdate(agreementId) == false ||
+            msg.sender == twoPartyAgreement.getSellerById(agreementId) 
             )
          {
-            s_beneficiaries[_agreementId] = i_agreements[s_agreementId].seller;
-            (bool success, ) = payable(s_beneficiaries[_agreementId]).call{value: s_amounts[_agreementId]}(""); // Transfer the funds to the seller
+            address seller = twoPartyAgreement.getSellerById(agreementId);
+            uint256 setPrice = twoPartyAgreement.getPrice(agreementId);  
+            (bool success, ) = payable(seller).call{value: setPrice}(""); // Transfer the funds to the seller
             if (success) {
             s_released = true;
             i_agreements[s_agreementId].fundsReleased = true;
             }
         }
     }
-
+    
     /**
-     * @dev buyer can get money back on cancel agreement 
+     * @dev seller can get return
      */
-    function fundReturned() external nonReentrant {
+    function fundReturned(uint256 agreementId) external nonReentrant {
         if (
-            i_agreements[s_agreementId].status == TwoPartyAgreement.AgreementStatus.Cancelled &&
-            i_agreements[s_agreementId].fundsReleased == false &&
-            s_agreementId == _agreementId 
+            twoPartyAgreement.getAgreementStatus(agreementId) == TwoPartyAgreement.AgreementStatus.Cancelled ||
+            twoPartyAgreement.getFundReleaseUpdate(agreementId) == false ||
+            msg.sender == twoPartyAgreement.getBuyerById(agreementId) 
         ) {
-            address buyer = i_agreements[s_agreementId].buyer;
-            (bool success, ) = payable(buyer).call{value: s_amounts[_agreementId]}("");// Return the funds to the buyer
+            address buyer = twoPartyAgreement.getBuyerById(agreementId);
+            uint256 setPrice = twoPartyAgreement.getPrice(agreementId);
+            (bool success, ) = payable(buyer).call{value: setPrice}("");// Return the funds to the buyer
             if (success) {
             s_released = false;
-            i_agreements[s_agreementId].fundsReleased = false;
             }
         }
-    }
-
-    // View & Pure Functions
-    function getBeneficiary(uint256 agreementId) public view returns (address) {
-        return s_beneficiaries[agreementId];
-    }
-
-    function getAmount(uint256 agreementId) public view returns (uint256) {
-        return s_amounts[agreementId];
     }
 
 }

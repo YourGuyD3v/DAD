@@ -34,7 +34,7 @@ const { assert, expect } = require("chai")
         it("reverts when invalid generatedId, and invalid year,date passed to the function", async () => {
           await expect (twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, invalidDeliveryDate, generatedId )).to.be.revertedWith(
             "TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId")
-            await expect (twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, "1234" )).to.be.revertedWith(
+            await expect (twoPartyAgreement.createAgreement("apple", terms, seller.address, Price, validDeliveryDate, 1234 )).to.be.revertedWith(
               "TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId")
           })
 

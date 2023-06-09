@@ -15,6 +15,11 @@ error TwoPartyAgreement_AgreementMustBeCompleted();
 error TwoPartyAgreement__YouCantCancelTheAgreement();
 error TwoPartyAgreement__youCantCancelTheAgreement();
 
+/**@title Two party Agreement
+ * @author Shurjeel khan
+ * @notice This contract is for creating a agreement
+ * @dev This implements the Chainlink VRF
+ */
 contract TwoPartyAgreement is VRFConsumerBaseV2 {
     // Enum, it tells the current status
     enum AgreementStatus {
@@ -40,7 +45,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
     bytes32 private immutable i_gasLane;
     uint64 private immutable i_subscriptionId;
-    uint16 private immutable i_callbackGasLimit;
+    uint32 private immutable i_callbackGasLimit;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
@@ -83,7 +88,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         _;
     }
 
-    modifier inProgress(uint256 _agreementId) virtual {
+    modifier inProgress(uint256 _agreementId) {
         if (i_agreements[s_agreementId].status != AgreementStatus.Created) {
             revert TwoPartyAgreement__AgreementIsNotCreatedYet();
         }
@@ -94,7 +99,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         address vrfCoordinatorV2,
         bytes32 gasLane,
         uint64 subscriptionId,
-        uint16 callbackGasLimit
+        uint32 callbackGasLimit
     ) VRFConsumerBaseV2(vrfCoordinatorV2) {
         i_vrfCoordinator = VRFCoordinatorV2Interface(vrfCoordinatorV2);
         i_gasLane = gasLane;
@@ -122,7 +127,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         uint256 _deliveryDate,
         uint256 agreementId
     ) public {
-        if (_deliveryDate < block.timestamp || agreementId != generatedId ) {
+        if (_deliveryDate < block.timestamp || agreementId != generatedId  ) {
             revert TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId();
         }
         i_agreements[agreementId] = Agreement(
@@ -146,8 +151,8 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, // keyHash
             i_subscriptionId,
-            i_callbackGasLimit,
             REQUEST_CONFIRMATIONS,
+            i_callbackGasLimit,
             NUM_WORDS
         );
         requestIds.push(requestId);
@@ -228,15 +233,26 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
 
     function getAgreementStatus(uint256 _agreementId) external view returns (AgreementStatus) {
     return i_agreements[_agreementId].status;
-
     }
 
-  function getCallbackGasLimit() external view returns (uint16) {
+  function getCallbackGasLimit() external view returns (uint32) {
     return i_callbackGasLimit;
   }
 
   function getPrice(uint256 agreementId) public view virtual returns (uint256) {
     return i_agreements[agreementId].price;
+  }
+
+  function getFundReleaseUpdate(uint256 agreementId) public view returns (bool) {
+    return i_agreements[agreementId].fundsReleased;
+  }
+
+  function getProduct(uint256 agreementId) public view returns (string memory) {
+    return i_agreements[agreementId].product;
+  }
+
+  function getDeliveryDate(uint256 agreementId) public view returns (uint256) {
+    return i_agreements[agreementId].deliveryDate;
   }
 
 }
