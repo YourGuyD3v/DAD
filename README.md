@@ -28,7 +28,7 @@
 ## Quickstart
 
 ```
-git clone https://github.com/YourGuyD3v/softRock.git
+git clone https://github.com/YourGuyD3v/DAD.git
 cd DAD
 yarn
 ```
