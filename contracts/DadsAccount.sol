@@ -65,8 +65,8 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
      */
     function fundWithdraw(uint256 agreementId) external nonReentrant onlySeller(agreementId) {
         if (
-            twoPartyAgreement.getAgreementStatus(agreementId) == TwoPartyAgreement.AgreementStatus.Completed ||
-            twoPartyAgreement.getFundReleaseUpdate(agreementId) == false ||
+            twoPartyAgreement.getAgreementStatus(agreementId) == TwoPartyAgreement.AgreementStatus.Completed &&
+            twoPartyAgreement.getFundReleaseUpdate(agreementId) == false &&
             msg.sender == twoPartyAgreement.getSellerById(agreementId) 
             )
          {
@@ -85,7 +85,7 @@ contract DadsAccount is TwoPartyAgreement, ReentrancyGuard {
      */
     function fundReturned(uint256 agreementId) external nonReentrant {
         if (
-            twoPartyAgreement.getAgreementStatus(agreementId) == TwoPartyAgreement.AgreementStatus.Cancelled ||
+            twoPartyAgreement.getAgreementStatus(agreementId) == TwoPartyAgreement.AgreementStatus.Cancelled &&
             msg.sender == twoPartyAgreement.getBuyerById(agreementId) 
         ) {
             address buyer = twoPartyAgreement.getBuyerById(agreementId);

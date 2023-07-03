@@ -127,7 +127,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         uint256 _deliveryDate,
         uint256 agreementId
     ) public {
-        if (_deliveryDate < block.timestamp || agreementId != generatedId  ) {
+        if (_deliveryDate < block.timestamp && agreementId != generatedId  ) {
             revert TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId();
         }
         i_agreements[agreementId] = Agreement(
