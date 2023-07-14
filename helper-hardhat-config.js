@@ -1,3 +1,5 @@
+const { ethers } = require("hardhat")
+
 networkConfig = {
     default: {
         name: "hardhat",
@@ -7,7 +9,9 @@ networkConfig = {
         jobId: "29fa9aa13bf1468788b7cc4a500a45b8",
         fundAmount: "1000000000000000000",
         automationUpdateInterval: "10",
-        twoPartyAgreementAddress:"0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", 
+        twoPartyAgreementAddress:"0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+        listingPrice: ethers.utils.parseEther("0.1"),
+
     },
     31337: {
         name: "localhost",
@@ -18,13 +22,16 @@ networkConfig = {
         fundAmount: "1000000000000000000",
         automationUpdateInterval: "10",
         ethUsdPriceFeed: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
-        twoPartyAgreementAddress:"0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", 
+        twoPartyAgreementAddress:"0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+        listingPrice: ethers.utils.parseEther("0.1"),
     },
     1: {
         name: "mainnet",
         linkToken: "0x514910771af9ca656af840dff83e8264ecf986ca",
         fundAmount: "0",
         automationUpdateInterval: "10",
+        listingPrice: ethers.utils.parseEther("0.1"),
+
     },
     11155111: {
         name: "sepolia",
@@ -40,6 +47,8 @@ networkConfig = {
         fee: "100000000000000000",
         fundAmount: "100000000000000000", // 0.1
         automationUpdateInterval: "10",
+        listingPrice: ethers.utils.parseEther("0.1"),
+
     },
     137: {
         name: "polygon",
@@ -49,6 +58,7 @@ networkConfig = {
         jobId: "12b86114fa9e46bab3ca436f88e1a912",
         fee: "100000000000000",
         fundAmount: "100000000000000",
+        listingPrice: ethers.utils.parseEther("0.1"),
     },
     80001: {
         name: "mumbai",
@@ -62,6 +72,7 @@ networkConfig = {
         fee: "100000000000000000",
         fundAmount: "100000000000000000", // 0.1
         automationUpdateInterval: "30",
+        listingPrice: ethers.utils.parseEther("0.1"),
     },
 }
 

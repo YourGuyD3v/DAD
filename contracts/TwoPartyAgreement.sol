@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-// Errors 
+// Errors
 error TwoPartyAgreement__NotTheBuyer();
 error TwoPartyAgreement__NotTheSeller();
 error TwoPartyAgreement__AgreementIsNotCreatedYet();
@@ -26,7 +26,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         Created,
         Completed,
         Cancelled
-    } // 
+    } //
 
     // Struct to store Local Variables
     struct Agreement {
@@ -127,7 +127,7 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         uint256 _deliveryDate,
         uint256 agreementId
     ) public {
-        if (_deliveryDate < block.timestamp && agreementId != generatedId  ) {
+        if (_deliveryDate < block.timestamp && agreementId != generatedId) {
             revert TwoPartyAgreement__InvalidDeliveryDateOrGeneratedId();
         }
         i_agreements[agreementId] = Agreement(
@@ -141,13 +141,21 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
             false
         );
         s_agreementId = agreementId;
-        emit AgreementCreated(_product, agreementId, _terms, msg.sender, _seller, _price, _deliveryDate);
+        emit AgreementCreated(
+            _product,
+            agreementId,
+            _terms,
+            msg.sender,
+            _seller,
+            _price,
+            _deliveryDate
+        );
     }
 
     /**
      * @dev requestAgreementId kicks off a Chainlink VRF call to get a random AgreementId.
      */
-       function requestAgreementId() external {
+    function requestAgreementId() external {
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane, // keyHash
             i_subscriptionId,
@@ -166,18 +174,18 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
      * calls to give random Agreement ID.
      */
     function fulfillRandomWords(
-        uint256 requestId ,
+        uint256 requestId,
         uint256[] memory randomWords
     ) internal override {
-   agreementCounter = agreementCounter + 1;
-    uint256 indexOfAgreementId = (randomWords[0] % (10**7)); // Generate a random agreement ID within the range of 1 to agreementCounter
+        agreementCounter = agreementCounter + 1;
+        uint256 indexOfAgreementId = (randomWords[0] % (10 ** 7)); // Generate a random agreement ID within the range of 1 to agreementCounter
         if (requestId <= 2) {
-        indexOfAgreementId = requestId;
-            }
-               generatedId = indexOfAgreementId;
+            indexOfAgreementId = requestId;
+        }
+        generatedId = indexOfAgreementId;
     }
 
-        /**
+    /**
      * @dev buyer confirms the delivery so seller can withraw funds
      */
     function confirmDelivery(
@@ -187,17 +195,15 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         emit AgreementCompleted(_agreementId);
     }
 
-        /**
+    /**
      * @dev buyer can cancel the agreement
      */
-    function cancelAgreementByBuyer(
-        uint256 _agreementId
-    ) external onlyBuyer(_agreementId) {
+    function cancelAgreementByBuyer(uint256 _agreementId) external onlyBuyer(_agreementId) {
         if (i_agreements[_agreementId].status == AgreementStatus.Completed) {
             revert TwoPartyAgreement__YouCantCancelTheAgreement();
         }
         i_agreements[_agreementId].status = AgreementStatus.Cancelled;
-            i_agreements[_agreementId].fundsReleased = true;
+        i_agreements[_agreementId].fundsReleased = true;
         delete i_agreements[_agreementId];
         emit AgreementCancelledAndDelete(_agreementId);
     }
@@ -205,12 +211,12 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
     /**
      * @dev seller can cancel the agreement
      */
-    function cancelAgreementBySeller(uint256 _agreementId) external onlySeller(_agreementId){
-        if (i_agreements[_agreementId].status == AgreementStatus.Completed ) {
-           revert TwoPartyAgreement__youCantCancelTheAgreement();
+    function cancelAgreementBySeller(uint256 _agreementId) external onlySeller(_agreementId) {
+        if (i_agreements[_agreementId].status == AgreementStatus.Completed) {
+            revert TwoPartyAgreement__youCantCancelTheAgreement();
         }
         i_agreements[_agreementId].status = AgreementStatus.Cancelled;
-            i_agreements[_agreementId].fundsReleased = true;
+        i_agreements[_agreementId].fundsReleased = true;
         delete i_agreements[_agreementId];
         emit AgreementCancelledAndDelete(_agreementId);
     }
@@ -229,32 +235,31 @@ contract TwoPartyAgreement is VRFConsumerBaseV2 {
         return s_agreementId;
     }
 
-    function getTerms(uint256 agreementId) public view  returns (string memory) {
+    function getTerms(uint256 agreementId) public view returns (string memory) {
         return i_agreements[agreementId].terms;
     }
 
     function getAgreementStatus(uint256 _agreementId) external view returns (AgreementStatus) {
-    return i_agreements[_agreementId].status;
+        return i_agreements[_agreementId].status;
     }
 
-  function getCallbackGasLimit() external view returns (uint32) {
-    return i_callbackGasLimit;
-  }
+    function getCallbackGasLimit() external view returns (uint32) {
+        return i_callbackGasLimit;
+    }
 
-  function getPrice(uint256 agreementId) public view virtual returns (uint256) {
-    return i_agreements[agreementId].price;
-  }
+    function getPrice(uint256 agreementId) public view virtual returns (uint256) {
+        return i_agreements[agreementId].price;
+    }
 
-  function getFundReleaseUpdate(uint256 agreementId) public view returns (bool) {
-    return i_agreements[agreementId].fundsReleased;
-  }
+    function getFundReleaseUpdate(uint256 agreementId) public view returns (bool) {
+        return i_agreements[agreementId].fundsReleased;
+    }
 
-  function getProduct(uint256 agreementId) public view returns (string memory) {
-    return i_agreements[agreementId].product;
-  }
+    function getProduct(uint256 agreementId) public view returns (string memory) {
+        return i_agreements[agreementId].product;
+    }
 
-  function getDeliveryDate(uint256 agreementId) public view returns (uint256) {
-    return i_agreements[agreementId].deliveryDate;
-  }
-
+    function getDeliveryDate(uint256 agreementId) public view returns (uint256) {
+        return i_agreements[agreementId].deliveryDate;
+    }
 }
